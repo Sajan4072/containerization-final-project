@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  flask-app:
+    image: rakeshbasnet/flask-app-backend:latest
+    env_file:
+      - .env
+    # environment:
+    #   - MONGODB_USERNAME=${MONGODB_USERNAME}
+    #   - MONGODB_PASSWORD=${MONGODB_PASSWORD}
+    ports:
+      - "8082:8082"
+    networks:
+      - app-network
+    deploy:
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+      placement:
+        constraints: [node.role == manager]
+
+  react-app:
+    image: rakeshbasnet/flask-app-frontend:latest
+    environment:
+      - REACT_APP_BASE_URL=http://flask-app:8082
+    ports:
+      - "3000:80"
+    networks:
+      - app-network
+    deploy:
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+
+  nginx:
+    image: nginx:latest
+    ports:
+      - "80:80"
+    networks:
+      - app-network
+    depends_on:
+      - flask-app
+      - react-app
+    deploy:
+      replicas: 1
+      placement:
+        constraints: [node.role == manager]
+
+networks:
+  app-network:
+    driver: overlay
